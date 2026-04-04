@@ -43,7 +43,7 @@ async function getOrCreateCategory(guild) {
 async function createPrivateChannel(guild, user) {
   const category = await getOrCreateCategory(guild);
 
-  const channelName = `task-${user.username}`.toLowerCase();
+  const channelName = `[LUMI]_Notify_${user.username}`.toLowerCase();
 
   // check nếu đã có rồi
   let channel = guild.channels.cache.find(c => c.name === channelName);
