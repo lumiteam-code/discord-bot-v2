@@ -70,13 +70,15 @@ async function createPrivateChannelForUser(member) {
         deny: [PermissionsBitField.Flags.ViewChannel]
       },
       // ✅ Cho user thấy
-      {
-        id: member.id,
-        allow: [
-          PermissionsBitField.Flags.ViewChannel,
-          PermissionsBitField.Flags.SendMessages
-        ]
-      },
+     {
+  id: member.id,
+  allow: [
+    PermissionsBitField.Flags.ViewChannel
+  ],
+  deny: [
+    PermissionsBitField.Flags.SendMessages
+  ]
+},
       // 🔥 QUAN TRỌNG: CHO BOT QUYỀN
       {
         id: client.user.id,
