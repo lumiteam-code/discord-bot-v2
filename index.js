@@ -87,27 +87,26 @@ app.post("/notify", async (req, res) => {
   try {
     const { userId, task } = req.body;
 
-    const guild = client.guilds.cache.first();
-    const user = await client.users.fetch(userId);
+    console.log("API HIT:", userId, task);
 
-    if (!guild || !user) {
-      return res.status(400).send("Không tìm thấy user hoặc guild");
+    // 🔥 FIX: dùng GUILD ID
+    const guild = await client.guilds.fetch("1489344554480963710");
+
+    const member = await guild.members.fetch(userId);
+
+    if (!member) {
+      return res.status(400).send("User không nằm trong server");
     }
 
-    const channel = await createPrivateChannel(guild, user);
+    const channel = await createPrivateChannel(guild, member.user);
 
-    await channel.send(`🆕 Task mới:\n👉 ${task}`);
+    // 👉 bạn muốn bỏ text thì để vậy
+    await channel.send(task || " ");
 
     res.send("OK");
 
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Error");
+    console.error("API ERROR:", err);
+    res.status(500).send(err.message);
   }
-});
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Server chạy port ${PORT}`);
 });
