@@ -4,6 +4,14 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
+const PORT = process.env.PORT || 3000;
+
+// 🚀 CHẠY SERVER TRƯỚC (QUAN TRỌNG)
+app.listen(PORT, () => {
+  console.log(`🚀 Server chạy port ${PORT}`);
+});
+
+// ===== DISCORD BOT =====
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -11,9 +19,8 @@ const client = new Client({
   ]
 });
 
-client.login(process.env.BOT_TOKEN);
-
 const CATEGORY_NAME = "LUMI BOT";
+const GUILD_ID = "1489344554480963710"; // 👈 THAY
 
 client.on("ready", () => {
   console.log("✅ Bot đã online");
@@ -35,14 +42,13 @@ async function getOrCreateCategory(guild) {
   return category;
 }
 
-// ===== CHANNEL RIÊNG =====
+// ===== CHANNEL =====
 async function createPrivateChannel(guild, user) {
   const category = await getOrCreateCategory(guild);
 
-  // 🔥 FIX: dùng user.id (KHÔNG BAO GIỜ TRÙNG)
   const channelName = `lumi-${user.id}`;
 
-  const channels = await guild.channels.fetch(1489344554480963710);
+  const channels = await guild.channels.fetch();
 
   let channel = channels.find(c => c.name === channelName);
 
@@ -73,12 +79,9 @@ async function createPrivateChannel(guild, user) {
 // ===== USER JOIN =====
 client.on("guildMemberAdd", async (member) => {
   try {
-    console.log("User join:", member.user.username);
-
     await createPrivateChannel(member.guild, member.user);
-
   } catch (err) {
-    console.error("Lỗi tạo channel:", err);
+    console.error(err);
   }
 });
 
@@ -89,18 +92,11 @@ app.post("/notify", async (req, res) => {
 
     console.log("API HIT:", userId, task);
 
-    // 🔥 FIX: dùng GUILD ID
-    const guild = await client.guilds.fetch("1489344554480963710");
-
+    const guild = await client.guilds.fetch(GUILD_ID);
     const member = await guild.members.fetch(userId);
-
-    if (!member) {
-      return res.status(400).send("User không nằm trong server");
-    }
 
     const channel = await createPrivateChannel(guild, member.user);
 
-    // 👉 bạn muốn bỏ text thì để vậy
     await channel.send(task || " ");
 
     res.send("OK");
@@ -110,3 +106,6 @@ app.post("/notify", async (req, res) => {
     res.status(500).send(err.message);
   }
 });
+
+// 🚀 LOGIN BOT (ĐỂ SAU CÙNG)
+client.login(process.env.BOT_TOKEN);
