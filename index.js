@@ -39,10 +39,9 @@ async function getOrCreateCategory(guild) {
 async function createPrivateChannel(guild, user) {
   const category = await getOrCreateCategory(guild);
 
-  // 👉 DÙNG USER ID (CHUẨN)
-  const channelName = `[LUMI]_Notify_${user.username}`.toLowerCase();
+  // 🔥 FIX: dùng user.id (KHÔNG BAO GIỜ TRÙNG)
+  const channelName = `lumi-${user.id}`;
 
-  // 👉 FETCH FULL (không dùng cache)
   const channels = await guild.channels.fetch();
 
   let channel = channels.find(c => c.name === channelName);
@@ -97,7 +96,7 @@ app.post("/notify", async (req, res) => {
 
     const channel = await createPrivateChannel(guild, user);
 
-    await channel.send(` `);
+    await channel.send(`🆕 Task mới:\n👉 ${task}`);
 
     res.send("OK");
 
