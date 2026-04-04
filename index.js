@@ -29,7 +29,7 @@ client.on("ready", () => {
   console.log("✅ Bot đã online");
 });
 
-// ===== TẠO CATEGORY NẾU CHƯA CÓ =====
+// ===== TẠO CATEGORY =====
 async function getOrCreateCategory(guild) {
   let category = guild.channels.cache.find(
     c => c.name === CATEGORY_NAME && c.type === ChannelType.GuildCategory
@@ -53,7 +53,6 @@ async function createPrivateChannelForUser(member) {
 
   const channelName = `lumi_bot_${member.user.username.toLowerCase()}`;
 
-  // nếu đã có thì bỏ qua
   let existing = guild.channels.cache.find(
     c => c.name === channelName
   );
@@ -65,12 +64,22 @@ async function createPrivateChannelForUser(member) {
     type: ChannelType.GuildText,
     parent: category.id,
     permissionOverwrites: [
+      // ❌ Ẩn với toàn server
       {
         id: guild.id,
         deny: [PermissionsBitField.Flags.ViewChannel]
       },
+      // ✅ Cho user thấy
       {
         id: member.id,
+        allow: [
+          PermissionsBitField.Flags.ViewChannel,
+          PermissionsBitField.Flags.SendMessages
+        ]
+      },
+      // 🔥 QUAN TRỌNG: CHO BOT QUYỀN
+      {
+        id: client.user.id,
         allow: [
           PermissionsBitField.Flags.ViewChannel,
           PermissionsBitField.Flags.SendMessages
@@ -82,31 +91,26 @@ async function createPrivateChannelForUser(member) {
   return channel;
 }
 
-// ===== KHI USER JOIN SERVER =====
+// ===== KHI USER JOIN =====
 client.on("guildMemberAdd", async (member) => {
   try {
-    console.log("User join:", member.user.username);
-
     const channel = await createPrivateChannelForUser(member);
-
     console.log("Đã tạo channel:", channel.name);
-
   } catch (err) {
-    console.error("Lỗi tạo channel:", err);
+    console.error(err);
   }
 });
 
-// ===== API NHẬN TASK =====
+// ===== API =====
 app.post("/notify", async (req, res) => {
   try {
     const { userId, task } = req.body;
 
     const guild = await client.guilds.fetch(GUILD_ID);
-
     const member = await guild.members.fetch(userId);
 
     if (!member) {
-      return res.status(404).send("User không tồn tại trong server");
+      return res.status(404).send("User không tồn tại");
     }
 
     const channelName = `lumi_bot_${member.user.username.toLowerCase()}`;
@@ -115,12 +119,10 @@ app.post("/notify", async (req, res) => {
       c => c.name === channelName
     );
 
-    // nếu chưa có thì tạo luôn
     if (!channel) {
       channel = await createPrivateChannelForUser(member);
     }
 
-    // gửi message
     await channel.send(task);
 
     res.send("OK");
