@@ -4,14 +4,6 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-
-// 🚀 CHẠY SERVER TRƯỚC (QUAN TRỌNG)
-app.listen(PORT, () => {
-  console.log(`🚀 Server chạy port ${PORT}`);
-});
-
-// ===== DISCORD BOT =====
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -19,8 +11,9 @@ const client = new Client({
   ]
 });
 
+client.login(process.env.BOT_TOKEN);
+
 const CATEGORY_NAME = "LUMI BOT";
-const GUILD_ID = "1489344554480963710"; // 👈 THAY
 
 client.on("ready", () => {
   console.log("✅ Bot đã online");
@@ -42,13 +35,14 @@ async function getOrCreateCategory(guild) {
   return category;
 }
 
-// ===== CHANNEL =====
+// ===== CHANNEL RIÊNG =====
 async function createPrivateChannel(guild, user) {
   const category = await getOrCreateCategory(guild);
 
+  // 🔥 FIX: dùng user.id (KHÔNG BAO GIỜ TRÙNG)
   const channelName = `lumi-${user.id}`;
 
-  const channels = await guild.channels.fetch();
+  const channels = await guild.channels.fetch(1489344554480963710);
 
   let channel = channels.find(c => c.name === channelName);
 
@@ -79,33 +73,16 @@ async function createPrivateChannel(guild, user) {
 // ===== USER JOIN =====
 client.on("guildMemberAdd", async (member) => {
   try {
+    console.log("User join:", member.user.username);
+
     await createPrivateChannel(member.guild, member.user);
+
   } catch (err) {
-    console.error(err);
+    console.error("Lỗi tạo channel:", err);
   }
 });
 
 // ===== API =====
 app.post("/notify", async (req, res) => {
-  try {
-    const { userId, task } = req.body;
-
-    console.log("API HIT:", userId, task);
-
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const member = await guild.members.fetch(userId);
-
-    const channel = await createPrivateChannel(guild, member.user);
-
-    await channel.send(task || " ");
-
-    res.send("OK");
-
-  } catch (err) {
-    console.error("API ERROR:", err);
-    res.status(500).send(err.message);
-  }
-});
-
-// 🚀 LOGIN BOT (ĐỂ SAU CÙNG)
-client.login(process.env.BOT_TOKEN);
+try {
+const { userId, task } = req.body;
