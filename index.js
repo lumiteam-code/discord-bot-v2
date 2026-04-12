@@ -1,4 +1,4 @@
-console.log("TOKEN:", process.env.BOT_TOKEN);
+
 const { 
   Client, 
   GatewayIntentBits, 
@@ -27,13 +27,17 @@ const client = new Client({
 });
 
 // ===== LOGIN =====
-client.login(process.env.BOT_TOKEN)
-  .then(() => {
-    console.log("🔑 Login thành công");
-  })
-  .catch(err => {
-    console.error("❌ Lỗi login:", err);
-  });
+console.log("🚀 Đang khởi động bot...");
+
+process.on("unhandledRejection", error => {
+  console.error("💥 Unhandled promise rejection:", error);
+});
+
+client.login(process.env.BOT_TOKEN);
+
+client.on("ready", () => {
+  console.log(`✅ Bot đã online: ${client.user.tag}`);
+});
 
 // ===== READY =====
 client.on("ready", () => {
