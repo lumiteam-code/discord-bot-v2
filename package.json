@@ -1,18 +1,12 @@
 {
-  "name": "discord-bot",
+  "name": "discord-bot-notify",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "discord.js": "^14.26.0",
-    "express": "^5.2.1"
+    "discord.js": "^14.14.1",
+    "express": "^4.18.2"
   }
 }
