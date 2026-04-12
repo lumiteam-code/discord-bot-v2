@@ -1,4 +1,3 @@
-
 const { 
   Client, 
   GatewayIntentBits, 
@@ -15,7 +14,6 @@ app.use(express.json());
 const GUILD_ID = "1489344554480963710";
 const CATEGORY_NAME = "LUMI BOT";
 
-// ===== DEBUG START =====
 console.log("🚀 Đang khởi động bot...");
 
 // ===== TẠO BOT =====
@@ -26,17 +24,9 @@ const client = new Client({
   ]
 });
 
-// ===== LOGIN =====
-console.log("🚀 Đang khởi động bot...");
-
+// ===== BẮT LỖI NGẦM =====
 process.on("unhandledRejection", error => {
-  console.error("💥 Unhandled promise rejection:", error);
-});
-
-client.login(process.env.BOT_TOKEN);
-
-client.on("ready", () => {
-  console.log(`✅ Bot đã online: ${client.user.tag}`);
+  console.error("💥 Lỗi ngầm:", error);
 });
 
 // ===== READY =====
@@ -44,19 +34,23 @@ client.on("ready", () => {
   console.log(`✅ Bot đã online: ${client.user.tag}`);
 });
 
-// ===== ERROR =====
-client.on("error", (err) => {
-  console.error("❌ Client error:", err);
+// ===== LOGIN (QUAN TRỌNG) =====
+client.login(process.env.BOT_TOKEN);
+
+// ===== EXPRESS SERVER =====
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🌐 Server chạy port ${PORT}`);
 });
 
-// ===== TẠO CATEGORY =====
+// ===== CATEGORY =====
 async function getOrCreateCategory(guild) {
   let category = guild.channels.cache.find(
     c => c.name === CATEGORY_NAME && c.type === ChannelType.GuildCategory
   );
 
   if (!category) {
-    console.log("📁 Tạo category mới...");
     category = await guild.channels.create({
       name: CATEGORY_NAME,
       type: ChannelType.GuildCategory
@@ -66,7 +60,7 @@ async function getOrCreateCategory(guild) {
   return category;
 }
 
-// ===== TẠO CHANNEL =====
+// ===== CHANNEL =====
 async function createPrivateChannelForUser(member) {
   const guild = member.guild;
 
@@ -75,10 +69,7 @@ async function createPrivateChannelForUser(member) {
   const channelName = `lumi_bot_${member.user.username.toLowerCase()}`;
 
   let existing = guild.channels.cache.find(c => c.name === channelName);
-
   if (existing) return existing;
-
-  console.log("🆕 Tạo channel cho:", member.user.username);
 
   const channel = await guild.channels.create({
     name: channelName,
@@ -126,10 +117,6 @@ app.post("/notify", async (req, res) => {
     const guild = await client.guilds.fetch(GUILD_ID);
     const member = await guild.members.fetch(userId);
 
-    if (!member) {
-      return res.status(404).send("User không tồn tại");
-    }
-
     const channelName = `lumi_bot_${member.user.username.toLowerCase()}`;
 
     let channel = guild.channels.cache.find(c => c.name === channelName);
@@ -146,11 +133,4 @@ app.post("/notify", async (req, res) => {
     console.error("❌ API error:", err);
     res.status(500).send("Error");
   }
-});
-
-// ===== SERVER =====
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`🌐 Server chạy port ${PORT}`);
 });
