@@ -13,7 +13,8 @@ const client = new Client({
 });
 
 // LOGIN BOT
-client.login(process.env.BOT_TOKEN);
+client.login(process.env.MTQ4OTM2MTU2MTU2NjA1NjY4OQ.GsIota.HkFUZL23WrsWRFCVeWBr95_4nTj0z_SJObJ-Xs
+);
 
 // ====== CONFIG ======
 const CATEGORY_NAME = "TASK BOT"; // tên folder chứa channel
