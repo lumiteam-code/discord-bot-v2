@@ -13,7 +13,7 @@ const client = new Client({
 });
 
 // LOGIN BOT
-client.login(process.env.MTQ4OTM2MTU2MTU2NjA1NjY4OQ.GsIota.HkFUZL23WrsWRFCVeWBr95_4nTj0z_SJObJ-Xs
+client.login(process.env.MTQ4OTM2MTU2MTU2NjA1NjY4OQ.GeeSNY.cqdksJuXI61uX8oDR65ucGXhldUvZX_TiQkHnc
 );
 
 // ====== CONFIG ======
