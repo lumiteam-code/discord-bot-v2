@@ -1,3 +1,4 @@
+console.log("TOKEN:", process.env.BOT_TOKEN);
 const { 
   Client, 
   GatewayIntentBits, 
