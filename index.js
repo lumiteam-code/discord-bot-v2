@@ -1,8 +1,6 @@
 const { 
   Client, 
-  GatewayIntentBits, 
-  ChannelType, 
-  PermissionsBitField 
+  GatewayIntentBits 
 } = require('discord.js');
 
 const express = require('express');
@@ -12,130 +10,67 @@ app.use(express.json());
 
 // ===== CONFIG =====
 const GUILD_ID = "1489344554480963710";
-const CATEGORY_NAME = "LUMI BOT";
 
-// ===== TẠO BOT =====
+// ===== BOT =====
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.Guilds
   ]
 });
 
 client.login(process.env.BOT_TOKEN);
 
-// ===== BOT ONLINE =====
+// ===== BOT READY =====
 client.on("ready", () => {
-  console.log("✅ Bot đã online");
+  console.log(`✅ Bot đã online: ${client.user.tag}`);
 });
 
-// ===== TẠO CATEGORY =====
-async function getOrCreateCategory(guild) {
-  let category = guild.channels.cache.find(
-    c => c.name === CATEGORY_NAME && c.type === ChannelType.GuildCategory
-  );
-
-  if (!category) {
-    category = await guild.channels.create({
-      name: CATEGORY_NAME,
-      type: ChannelType.GuildCategory
-    });
-  }
-
-  return category;
-}
-
-// ===== TẠO CHANNEL CHO USER =====
-async function createPrivateChannelForUser(member) {
-  const guild = member.guild;
-
-  const category = await getOrCreateCategory(guild);
-
-  const channelName = `lumi_bot_${member.user.username.toLowerCase()}`;
-
-  let existing = guild.channels.cache.find(
-    c => c.name === channelName
-  );
-
-  if (existing) return existing;
-
-  const channel = await guild.channels.create({
-    name: channelName,
-    type: ChannelType.GuildText,
-    parent: category.id,
-    permissionOverwrites: [
-      // ❌ Ẩn với toàn server
-      {
-        id: guild.id,
-        deny: [PermissionsBitField.Flags.ViewChannel]
-      },
-      // ✅ Cho user thấy
-     {
-  id: member.id,
-  allow: [
-    PermissionsBitField.Flags.ViewChannel
-  ],
-  deny: [
-    PermissionsBitField.Flags.SendMessages
-  ]
-},
-      // 🔥 QUAN TRỌNG: CHO BOT QUYỀN
-      {
-        id: client.user.id,
-        allow: [
-          PermissionsBitField.Flags.ViewChannel,
-          PermissionsBitField.Flags.SendMessages
-        ]
-      }
-    ]
-  });
-
-  return channel;
-}
-
-// ===== KHI USER JOIN =====
-client.on("guildMemberAdd", async (member) => {
-  try {
-    const channel = await createPrivateChannelForUser(member);
-    console.log("Đã tạo channel:", channel.name);
-  } catch (err) {
-    console.error(err);
-  }
-});
-
-// ===== API =====
+// ===== API SEND MESSAGE =====
 app.post("/notify", async (req, res) => {
+
   try {
-    const { userId, task } = req.body;
 
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const member = await guild.members.fetch(userId);
+    const { channelId, task } = req.body;
 
-    if (!member) {
-      return res.status(404).send("User không tồn tại");
+    if (!channelId || !task) {
+      return res.status(400).send("Thiếu channelId hoặc task");
     }
 
-    const channelName = `lumi_bot_${member.user.username.toLowerCase()}`;
+    if (!client.isReady()) {
+      return res.status(503).send("Bot chưa sẵn sàng");
+    }
 
-    let channel = guild.channels.cache.find(
-      c => c.name === channelName
-    );
+    // ===== FETCH CHANNEL =====
+    const channel = await client.channels.fetch(channelId).catch(() => null);
 
     if (!channel) {
-      channel = await createPrivateChannelForUser(member);
+      return res.status(404).send("Không tìm thấy channel");
     }
 
+    // ===== SEND MESSAGE =====
     await channel.send(task);
+
+    console.log(`📨 Sent to ${channelId}`);
 
     res.send("OK");
 
   } catch (err) {
-    console.error(err);
+
+    console.error("❌ ERROR:", err);
+
     res.status(500).send("Error");
   }
+
 });
 
-// ===== SERVER =====
+
+// ===== HEALTH CHECK (CHO RENDER / UPTIME) =====
+app.get("/", (req, res) => {
+  res.send("Bot is running 🚀");
+});
+
+
+// ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
