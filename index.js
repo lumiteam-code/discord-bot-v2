@@ -1,47 +1,31 @@
-const { 
-  Client, 
-  GatewayIntentBits, 
-  ChannelType, 
-  PermissionsBitField 
-} = require('discord.js');
-
+const { Client, GatewayIntentBits, PermissionsBitField, ChannelType } = require('discord.js');
 const express = require('express');
 
 const app = express();
 app.use(express.json());
 
-// ===== CONFIG =====
-const GUILD_ID = "1489344554480963710";
-const CATEGORY_NAME = "LUMI BOT";
-
-// ===== TẠO BOT =====
+// TẠO BOT (thêm intent để detect user join)
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers // QUAN TRỌNG
   ]
 });
 
+// LOGIN BOT
 client.login(process.env.BOT_TOKEN);
 
-// ===== BOT ONLINE =====
-client.on("ready", async () => {
+// ====== CONFIG ======
+const CATEGORY_NAME = "TASK BOT"; // tên folder chứa channel
+
+// ====== BOT READY ======
+client.on("ready", () => {
   console.log("✅ Bot đã online");
-
-  // 🔥 FIX 1: preload member cache
-  const guild = await client.guilds.fetch(GUILD_ID);
-  await guild.members.fetch();
-
-  console.log("✅ Loaded members cache");
 });
 
-// ===== TẠO CATEGORY =====
+// ====== TẠO / LẤY CATEGORY ======
 async function getOrCreateCategory(guild) {
-
-  // 🔥 FIX 2: fetch channels thay vì cache
-  const channels = await guild.channels.fetch();
-
-  let category = channels.find(
+  let category = guild.channels.cache.find(
     c => c.name === CATEGORY_NAME && c.type === ChannelType.GuildCategory
   );
 
@@ -55,25 +39,18 @@ async function getOrCreateCategory(guild) {
   return category;
 }
 
-// ===== TẠO CHANNEL CHO USER =====
-async function createPrivateChannelForUser(member) {
-
-  const guild = member.guild;
-
+// ====== TẠO CHANNEL RIÊNG CHO USER ======
+async function createPrivateChannel(guild, user) {
   const category = await getOrCreateCategory(guild);
 
-  // 🔥 FIX 3: dùng userId thay vì username
-  const channelName = `lumi_bot_${member.id}`;
+  const channelName = `task-${user.username}`.toLowerCase();
 
-  const channels = await guild.channels.fetch();
+  // check nếu đã có rồi
+  let channel = guild.channels.cache.find(c => c.name === channelName);
 
-  let existing = channels.find(
-    c => c.name === channelName
-  );
+  if (channel) return channel;
 
-  if (existing) return existing;
-
-  const channel = await guild.channels.create({
+  channel = await guild.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
     parent: category.id,
@@ -83,12 +60,7 @@ async function createPrivateChannelForUser(member) {
         deny: [PermissionsBitField.Flags.ViewChannel]
       },
       {
-        id: member.id,
-        allow: [PermissionsBitField.Flags.ViewChannel],
-        deny: [PermissionsBitField.Flags.SendMessages]
-      },
-      {
-        id: client.user.id,
+        id: user.id,
         allow: [
           PermissionsBitField.Flags.ViewChannel,
           PermissionsBitField.Flags.SendMessages
@@ -100,48 +72,35 @@ async function createPrivateChannelForUser(member) {
   return channel;
 }
 
-// ===== KHI USER JOIN =====
+// ====== KHI USER JOIN SERVER ======
 client.on("guildMemberAdd", async (member) => {
   try {
-    console.log("🔥 USER JOIN:", member.user.tag);
+    console.log("User join:", member.user.username);
 
-    const channel = await createPrivateChannelForUser(member);
-
-    console.log("✅ Created channel:", channel.name);
+    await createPrivateChannel(member.guild, member.user);
 
   } catch (err) {
-    console.error("❌ ERROR CREATE CHANNEL:", err);
+    console.error("Lỗi tạo channel:", err);
   }
 });
 
-// ===== API =====
+// ====== API NHẬN TASK ======
 app.post("/notify", async (req, res) => {
   try {
     const { userId, task } = req.body;
 
-    const guild = await client.guilds.fetch(GUILD_ID);
+    console.log("Nhận task:", task);
 
-    // 🔥 FIX 4: fetch member chắc chắn
-    const member = await guild.members.fetch(userId).catch(() => null);
+    const guild = client.guilds.cache.first();
+    const user = await client.users.fetch(userId);
 
-    if (!member) {
-      return res.status(404).send("User không tồn tại");
+    if (!guild || !user) {
+      return res.status(400).send("Không tìm thấy user hoặc guild");
     }
 
-    const channelName = `lumi_bot_${member.id}`;
+    const channel = await createPrivateChannel(guild, user);
 
-    const channels = await guild.channels.fetch();
-
-    let channel = channels.find(
-      c => c.name === channelName
-    );
-
-    // 🔥 nếu chưa có → tạo luôn
-    if (!channel) {
-      channel = await createPrivateChannelForUser(member);
-    }
-
-    await channel.send(task);
+    await channel.send(`🆕 Task mới của bạn:\n👉 ${task}`);
 
     res.send("OK");
 
@@ -151,7 +110,7 @@ app.post("/notify", async (req, res) => {
   }
 });
 
-// ===== SERVER =====
+// ====== CHẠY SERVER ======
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
