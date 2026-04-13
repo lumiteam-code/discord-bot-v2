@@ -116,7 +116,7 @@ app.post("/notify", async (req, res) => {
       return res.status(404).send("Không tìm thấy channel");
     }
 
-    
+    await channel.send(task);
 
     console.log("📨 Đã gửi task tới:", channelId);
 
