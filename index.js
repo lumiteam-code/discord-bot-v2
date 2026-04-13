@@ -8,50 +8,49 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+// ====== CACHE (GIẢM API CALL) ======
+const channelCache = new Map();
+
 // ====== DISCORD CLIENT ======
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers // cần để detect user join
+    GatewayIntentBits.GuildMembers
   ]
 });
 
 // ====== LOGIN ======
-client.login(process.env.BOT_TOKEN)
-  .then(() => console.log("🔑 ĐÃ GỌI LOGIN"))
-  .catch(err => console.error("💥 LOGIN FAIL:", err));
+client.login(process.env.BOT_TOKEN);
 
 // ====== CONFIG ======
 const CATEGORY_NAME = "TASK BOT";
 
-// ====== BOT READY ======
-client.on("ready", () => {
+// ====== READY ======
+client.once("ready", () => {
   console.log("✅ BOT ONLINE:", client.user.tag);
 });
 
-// ====== TẠO / LẤY CATEGORY ======
+// ====== GET / CREATE CATEGORY (TỐI ƯU) ======
 async function getOrCreateCategory(guild) {
   let category = guild.channels.cache.find(
     c => c.name === CATEGORY_NAME && c.type === ChannelType.GuildCategory
   );
 
-  if (!category) {
-    category = await guild.channels.create({
-      name: CATEGORY_NAME,
-      type: ChannelType.GuildCategory
-    });
-  }
+  if (category) return category;
 
-  return category;
+  return await guild.channels.create({
+    name: CATEGORY_NAME,
+    type: ChannelType.GuildCategory
+  });
 }
 
-// ====== TẠO CHANNEL RIÊNG ======
+// ====== CREATE CHANNEL ======
 async function createPrivateChannel(guild, member) {
   const category = await getOrCreateCategory(guild);
 
   const channelName = `notify_${member.displayName}`.toLowerCase();
 
-  // check nếu đã có
+  // check cache trước (nhanh hơn)
   let channel = guild.channels.cache.find(c => c.name === channelName);
   if (channel) return channel;
 
@@ -72,7 +71,7 @@ async function createPrivateChannel(guild, member) {
         ]
       },
       {
-        id: guild.members.me.id, // 👈 BOT
+        id: guild.members.me.id,
         allow: [
           PermissionsBitField.Flags.ViewChannel,
           PermissionsBitField.Flags.SendMessages
@@ -81,8 +80,8 @@ async function createPrivateChannel(guild, member) {
     ]
   });
 
-  console.log("📁 Đã tạo channel:", channel.name);
-  console.log("💾 Channel ID:", channel.id);
+  // lưu cache
+  channelCache.set(member.id, channel.id);
 
   return channel;
 }
@@ -90,49 +89,56 @@ async function createPrivateChannel(guild, member) {
 // ====== USER JOIN ======
 client.on("guildMemberAdd", async (member) => {
   try {
-    console.log("👤 User join:", member.displayName);
-
     const channel = await createPrivateChannel(member.guild, member);
 
-    await channel.send(`👋 Chào ${member}, đây là channel riêng của bạn!`);
+    // ❌ bỏ welcome nếu muốn tiết kiệm
+    // await channel.send(`👋 Chào ${member}, đây là channel riêng của bạn!`);
 
   } catch (err) {
-    console.error("❌ Lỗi tạo channel:", err);
+    console.error("❌ Lỗi tạo channel:", err.message);
   }
 });
 
-// ====== API NHẬN TASK ======
+// ====== API ======
 app.post("/notify", async (req, res) => {
   try {
     const { channelId, task } = req.body;
 
     if (!channelId || !task) {
-      return res.status(400).send("Thiếu channelId hoặc task");
+      return res.status(400).send("Missing data");
     }
 
-    const channel = await client.channels.fetch(channelId);
+    let channel;
+
+    // ưu tiên cache (siêu nhanh, không gọi API)
+    if (channelCache.has(channelId)) {
+      channel = client.channels.cache.get(channelId);
+    }
+
+    // fallback nếu chưa có cache
+    if (!channel) {
+      channel = await client.channels.fetch(channelId);
+    }
 
     if (!channel) {
-      return res.status(404).send("Không tìm thấy channel");
+      return res.status(404).send("Channel not found");
     }
 
     await channel.send(task);
 
-    console.log("📨 Đã gửi task tới:", channelId);
-
     res.send("OK");
 
   } catch (err) {
-    console.error("❌ Lỗi gửi task:", err);
+    console.error("❌ Send error:", err.message);
     res.status(500).send("Error");
   }
 });
 
-// ====== SERVER ======
+// ====== KEEP ALIVE ======
 app.get("/", (req, res) => {
-  res.send("Bot is running");
+  res.send("ok");
 });
 
 app.listen(PORT, () => {
-  console.log("🌐 Server chạy port " + PORT);
+  console.log("🌐 Port " + PORT);
 });
