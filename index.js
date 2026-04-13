@@ -5,19 +5,38 @@ console.log("🚀 START FILE");
 
 const app = express();
 
-// 🔥 MỞ PORT để Render không kill
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🌐 Server chạy port", PORT);
+
+app.get("/", (req, res) => {
+  res.send("Bot is running");
 });
 
-// ===== DISCORD BOT =====
+app.listen(PORT, () => {
+  console.log("🌐 Server chạy port " + PORT);
+});
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
+// 👇 LOG TRẠNG THÁI KẾT NỐI
 client.on("ready", () => {
   console.log("✅ BOT ONLINE:", client.user.tag);
 });
 
-client.login(process.env.BOT_TOKEN);
+client.on("error", (err) => {
+  console.error("❌ CLIENT ERROR:", err);
+});
+
+client.on("debug", (msg) => {
+  console.log("🐞 DEBUG:", msg);
+});
+
+// 👇 LOGIN
+client.login(process.env.BOT_TOKEN)
+  .then(() => {
+    console.log("🔑 ĐÃ GỌI LOGIN");
+  })
+  .catch(err => {
+    console.error("💥 LOGIN FAIL:", err);
+  });
