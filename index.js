@@ -1,3 +1,10 @@
+const https = require("https");
+
+https.get("https://discord.com/api/v10/gateway", (res) => {
+  console.log("🌍 STATUS:", res.statusCode);
+}).on("error", (err) => {
+  console.error("❌ NETWORK ERROR:", err);
+});
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 
